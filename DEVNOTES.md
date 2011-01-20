@@ -57,19 +57,17 @@ Directory layout: forked github repo name is "Tic-Tac-Toe." Dashes are invalid i
 
 tictac.py module: keep game logic decoupled from django framework. 'tictac' algorithm module to avoid possible name conflicts with 'tictactoe' django app. (Maybe there's a better way but refactoring is easy, go with this)
 
+Algorithm ([minimax]): Tried [Randy Hyde's algorithm][1], initial tests showed it not to work well. Not going to waste time on any more arbitrarily specified algorithms, will just implement [minimax] and let the machine do the heavy lifting. Since tic-tac-toe has symmetries and users must take turns moving, there should be plenty of opportunity to reduce storage and processing load if needed.
+
+[1]: http://webster.cs.ucr.edu/AsmTools/MASM/TicTacToe/ttt_1.html
+
+Pushing dev branch to github: normally, I would keep my development branch on my local machine and only push after a nice clean merge to master, but I want to show my progress to the reviewer.
+
 ## Implementation ideas
 
 ### Algorithm
 
-- Implement [Randy Hyde's algorithm][1]? (fastest turnaround?)
-
-[1]: http://webster.cs.ucr.edu/AsmTools/MASM/TicTacToe/ttt_1.html
-
-- Or, craft my own naïve implementation of Wikipedia's [perfect game strategy][2]
-
-[2]: http://en.wikipedia.org/wiki/Tic-tac-toe#Strategy
-
-- Or, implement [MiniMax] algorithm (more general, pretending requirements might change) Recursively determines best move given any game state.
+- Implement [MiniMax] algorithm (more general, pretending requirements might change) Recursively determines best move given any game state.
 	- Enhancement: employ deque rather than relying on recursive calls; if this were not tic-tac-toe we might need more tracking than Python's call stack could provide.
 	- Enhancement: employ [alpha-beta pruning] to reduce storage requirement
 	- Enhancement: create hashtable (dict) that stores game states with best move
