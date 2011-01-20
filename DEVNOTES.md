@@ -1,22 +1,21 @@
-% CoxMediaGroup Code Challenge Entry
-% Michael F. Lamb (mike@datagrok.org)
-% Thu, 20 Jan 2011 00:53:52 -0500
+# CoxMediaGroup Code Challenge Entry
 
 by Michael F. Lamb <mike@datagrok.org>
 
 ## Task
 
 1. Fork this repo on github. (done)
-2. Create an app[^1] that can interactively play the game of Tic Tac Toe against another player and never lose[^2].
+2. Create an app that can interactively play the game of Tic Tac Toe against another player and never lose.
 3. Commit early and often, with good messages.
 4. Push your code back to github and send me a pull request.
 
-[^1]: I am assuming "app" means "django app," does not include demonstration of Django project setup, admin api, etc.
-[^2]: I am assuming "never lose" means "wins or draws."
+### Assumptions
+
+- "app" means "django app," does not include demonstration of Django project setup, admin api, etc.
+
+- "never lose" means "wins or draws."
 
 ## Development plan
-
-1. ~~Research existing implementation strategies for Tic-Tac-Toe A.I.~~ done
 
 2. Implement tic-tac-toe algorithm as generic python module.
 
