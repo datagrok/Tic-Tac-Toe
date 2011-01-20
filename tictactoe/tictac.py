@@ -1,19 +1,48 @@
 '''Algorithms for playing the game of tic-tac-toe.
 
-We represent state as a string of exactly nine characters from 'x', 'o', and
-space, such that state[x] corresponds to the board position examined from
-top-left to bottom-right. Example:
+    http://en.wikipedia.org/wiki/Tic-tac-toe
+
+This is an implementation of a Negamax algorithm to play a "perfect" game of
+tic-tac-toe.
+
+    http://en.wikipedia.org/wiki/Negamax
+
+We represent the game board (state) as a string of exactly nine characters from
+'x', 'o', and space. The characters in the state correspond to the board
+position examined from top-left to bottom-right. Example:
 
 >>> state = (
 ...     ' x '
 ...     'o  '
 ...     '  x')
+>>> state
+' x o    x'
+>>> validate_state(state)
+>>> # (no exceptions indicates successful validation)
 >>> printboard(state)
    | X |  
 -----------
  O |   |  
 -----------
    |   | X
+>>> state = move(state)
+>>> state = move(state)
+>>> state = move(state)
+>>> state = move(state)
+>>> state = move(state)
+>>> printboard(state)
+   | X | O
+-----------
+ O | O | X
+-----------
+ X | O | X
+>>> state = move(state)
+>>> printboard(state)
+ X | X | O
+-----------
+ O | O | X
+-----------
+ X | O | X
 
 '''
 import re
@@ -22,30 +51,61 @@ __author__ = 'Michael F. Lamb <mike@datagrok.org>'
 __date__ = 'Thu, 20 Jan 2011 01:15:05 -0500'
 
 
-def state_rotations(state):
-    '''Given a tictactoe board state, return all the symmetric variants of the
-    same state, and the index to invert the permutation for each.
+class TTTStateError(StandardError):
+    pass
+
+
+def get_win_patterns():
+    '''Creates a dict mapping players to regular expression objects that will
+    match on a game state they have won.
+   
+    >>> win_patterns = get_win_patterns()
+    >>> win_patterns['o'].match('xxx      ') and 'O Wins'
+    >>> win_patterns['x'].match('xxx      ') and 'X Wins'
+    'X Wins'
+    >>> win_patterns['o'].match('x x   ooo') and 'O Wins'
+    'O Wins'
+
     '''
+    win_pattern = '|'.join([
+        'xxx......',
+        '...xxx...',
+        '......xxx',
+        'x..x..x..',
+        '.x..x..x.',
+        '..x..x..x',
+        'x...x...x',
+        '..x.x.x..',
+    ])
 
-    # The tic-tac-toe game board is symmetrical; its movement belongs to the
-    # dihedral group of order 8.
+    return {
+        'x': re.compile(win_pattern),
+        'o': re.compile(win_pattern.replace('x','o')),
+    }
 
-    for x in range(4):
-        yield (state, x)
-        state = rotstate(state)
 
-    #return [(state, 0),
-    #(''.join(state[x] for x in [2, 5, 8, 1, 4, 7, 0, 3, 6]), 3), #l1
-    #(''.join(state[x] for x in [8, 7, 6, 5, 4, 3, 2, 1, 0]), 2), #l2
-    #(''.join(state[x] for x in [6, 3, 0, 7, 4, 1, 8, 5, 2]), 1), #l3
-    #(''.join(state[x] for x in [6, 7, 8, 3, 4, 5, 0, 1, 2]), 4), #hflip
-    #(''.join(state[x] for x in [0, 3, 6, 1, 4, 7, 2, 5, 8]), 7), #hflip, r1
-    #(''.join(state[x] for x in [2, 1, 0, 5, 4, 3, 8, 7, 6]), 6), #hflip, r2
-    #(''.join(state[x] for x in [8, 5, 2, 7, 4, 1, 6, 3, 0]), 5), #hflip, r3
-    #]
+def validate_state(state):
+    '''Raises an error if state is invalid. Otherwise returns None.
+    
+    >>> validate_state('xxxooxoox')
+    >>> validate_state('xxx      ')
+    Traceback (most recent call last):
+    ...
+    TTTStateError: Tic Tac Toe state indicates a player moved out-of-turn.
+    
+    '''
+    if not isinstance(state, str):
+        raise TTTStateError('Tic Tac Toe state must be a string instance.')
+    if len(state) != 9:
+        raise TTTStateError('Tic Tac Toe state must be exactly 9 characters long.')
+    if state.strip('xo ') != '':
+        raise TTTStateError('Tic Tac Toe state must contain only the characters x, o, or space.')
+    if state.count('x') - state.count('o') not in [0, 1]:
+        raise TTTStateError('Tic Tac Toe state indicates a player moved out-of-turn.')
 
 
 def printboard(state):
+    '''Utility function to display the state as an ascii-art game board.'''
     print '\n'.join([
         ' %s | %s | %s',
         '-----------',
@@ -55,99 +115,110 @@ def printboard(state):
     ]) % tuple(state.upper())
 
 
-class TTTHyde(object):
-    '''A container for an implementation of an algorithm to play a "perfect"
-    game of tic-tac-toe.
-    
-    This is an implementation of the algorithm as given here:
+def opponent(player):
+    '''Returns the player opposite the player given as the argument.'''
+    if player == 'x':
+        return 'o'
+    return 'x'
 
-        http://webster.cs.ucr.edu/AsmTools/MASM/TicTacToe/ttt_1.html
 
-    I believe the algorithm author's name is Ryan Hyde.
+def lastplayer(state):
+    '''Returns the player who moved last in the given state.'''
+    if state.count('x') - state.count('o'):
+        return 'x'
+    return 'o'
+
+
+def evaluate_state(state, player=None, _re_win=get_win_patterns()):
+    '''Returns a float between 1 and -1 representing the greatest possible loss
+    for the player about to move in this particular state. Against a perfect
+    opponent, a negative value guarantees a loss and a 0 value guarantees a
+    tie.
+
+    player -- optional, the player who moved last.
+    _re_win -- internal, do not override.
+
+    >>> state = 'x     o  '
+    >>> for s in possible_moves(state, 'x'):
+    ...    score = evaluate_state(s)
+    ...    print '%s %5.2f %5s' % (repr(s), score,
+    ...        score>0 and 'win' or score<0 and 'loss' or 'draw')
+    'xx    o  '  0.66   win
+    'x x   o  '  0.66   win
+    'x  x  o  ' -0.59  loss
+    'x   x o  '  0.00  draw
+    'x    xo  '  0.00  draw
+    'x     ox '  0.00  draw
+    'x     o x'  0.66   win
 
     '''
+    # figure out who moved last
+    if player is None:
+        player = lastplayer(state)
 
-    # This algorithm employs regular expression objects which match states on
-    # the tic-tac-toe board. the regular expression objects contain matching
-    # groups that return the state before and after the blank space that the
-    # computer will move into given a match. Thus, once a matching state is
-    # found, the new state is generated by .expand(\1o\2).)
+    # check for a win
+    if _re_win[player].match(state):
+        return 1
+    # check for a loss
+    elif _re_win[opponent(player)].match(state):
+        return -1
 
-    re_winning = [re.compile(s) for s in [
-        '() (oo......)', # check 8
-        '() (..o..o..)', # unneeded
-        '() (...o...o)', # check 4
-        '(o) (o......)', # check 4
-        '(.) (..o..o.)', # check 4
-    ]]
+    # check for a draw
+    elif ' ' not in state:
+        return 0
 
-    re_blocking = [
-        re.compile(rex.pattern.replace('o','x')) for rex in re_winning]
-
-    re_fork_blocking = [re.compile(s) for s in [
-        '( ) (x o x  )',
-        '() (x xo. ..)',
-        '() ( xxo. ..)',
-        '() ( x o.x..)',
-        '(.) (..x.. .)',
-        '() (...x... )',
-        '(x.x.) (....)',
-    ]]
-
-    re_first_open = re.compile('([xo]*) (.*)')
-
-    def move(self, state):
-        '''Given a tictactoe board state, compute and return a new state
-        that includes the computer's move.
-
-        Assumes that it is the computer's turn, and that the computer is "o."
-        '''
-
-        rotations, mo = self.match_patterns(state)
-
-        if not mo:
-            print 'no mo'
-            mo = self.re_first_open.match(state)
-
-        try:
-            newstate = mo.expand(r'\1o\2')
-        except:
-            print mo.groups()
-            raise
-
-        # re-orient the board correctly
-        newstate = rotstate(newstate)[-rotations]
-
-        return newstate
+    # recurse
+    else:
+        return -.9 * max([evaluate_state(s) for s in possible_moves(state, opponent(player))])
 
 
-    def match_patterns(self, state):
-        '''Helper for move()'''
-        for re_pats in [self.re_winning, self.re_blocking, self.re_fork_blocking]:
-            for re_pat in re_pats:
-                for n, rstate in enumerate(rotstate(state)):
-                    mo = re_pat.match(rstate)
-                    if mo:
-                        return n, mo
-        return (0, None)
+def possible_moves(state, player=None):
+    '''Generate all possible moves for the next player, given state.
+ 
+    player -- optional, the player who will move next.
+
+    Example:
+    >>> for s in possible_moves(state='xox  x o ', player='x'):
+    ...     print repr(s)
+    'xoxx x o '
+    'xox xx o '
+    'xox  xxo '
+    'xox  x ox'
+
+    '''
+    if player is None:
+        player = opponent(lastplayer(state))
+
+    for i in range(len(state)):
+        if state[i] == ' ':
+            yield state[:i] + player + state[i+1:]
 
 
-def __debug_1():
-    state = '  x      '
-    state = '         '
-    while True:
-        state = move(state)
-        printboard(state)
-        state = state.replace('o','t')
-        state = state.replace('x','o')
-        state = state.replace('t','x')
-        state = move(state)
-        state = state.replace('o','t')
-        state = state.replace('x','o')
-        state = state.replace('t','x')
-        printboard(state)
-        if ' ' not in state:
-            break
+def move(state):
+    '''Given a tictactoe board state, compute and return a new state that
+    includes the computer's choice of the optimal next move.
+    
+    >>> state = 'x x o   o'
+    >>> printboard(state)
+     X |   | X
+    -----------
+       | O |  
+    -----------
+       |   | O
+    >>> printboard(move(state))
+     X | X | X
+    -----------
+       | O |  
+    -----------
+       |   | O
+    '''
+
+    my_player = opponent(lastplayer(state))
+    states = [(evaluate_state(s, my_player), s) for s in possible_moves(state, my_player)]
+    states.sort()
+    states.reverse()
+
+    return states[0][1]
 
 
 if __name__ == "__main__":
