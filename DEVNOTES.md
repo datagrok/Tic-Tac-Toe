@@ -17,8 +17,6 @@ by Michael F. Lamb <mike@datagrok.org>
 
 ## Development plan
 
-2. Implement tic-tac-toe algorithm as generic python module.
-
 3. Minimal "simplest thing that works" implementation. Just satisfy requirements of task:
 
 	- Django view imports and adapts generic tic-tac-toe algorithm to Django view
@@ -29,7 +27,7 @@ by Michael F. Lamb <mike@datagrok.org>
 	- No database required.
 	- No sessions required.
 	- HTML-only implementation:
-		- url?state=xox++xo++x etc.
+		- url?state=xox-xo--x etc.
 
 4. (Tag, submit pull request, ask for feedback and further direction, continue as time allows with enhancements.)
 
@@ -58,9 +56,14 @@ tictac.py module: keep game logic decoupled from django framework. 'tictac' algo
 
 Algorithm ([minimax]): Tried [Randy Hyde's algorithm][1], initial tests showed it not to work well. Not going to waste time on any more arbitrarily specified algorithms, will just implement [minimax] and let the machine do the heavy lifting. Since tic-tac-toe has symmetries and users must take turns moving, there should be plenty of opportunity to reduce storage and processing load if needed.
 
+Algorithm: [negamax] variant of [minimax] demonstrated itself to be appropriate for this task, because the game is alternate-player
+
 [1]: http://webster.cs.ucr.edu/AsmTools/MASM/TicTacToe/ttt_1.html
+[negamax]: http://en.wikipedia.org/wiki/Negamax
 
 Pushing dev branch to github: normally, I would keep my development branch on my local machine and only push after a nice clean merge to master, but I want to show my progress to the reviewer.
+
+State representation: As a string, for easy matching with python builtin regular expressions. 'x' for x, 'o' for o, '-' for empty position; ' ' makes for unsightly URLs.
 
 ## Implementation ideas
 
@@ -89,3 +92,5 @@ Pushing dev branch to github: normally, I would keep my development branch on my
 	- jQuery / AJAX gameplay
 	- nicer look+feel?
 	- scoreboard?
+
+<!-- vim: set ft=mkd: -->

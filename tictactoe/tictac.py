@@ -8,15 +8,15 @@ tic-tac-toe.
     http://en.wikipedia.org/wiki/Negamax
 
 We represent the game board (state) as a string of exactly nine characters from
-'x', 'o', and space. The characters in the state correspond to the board
+'x', 'o', and '-'. The characters in the state correspond to the board
 position examined from top-left to bottom-right. Example:
 
 >>> state = (
-...     ' x '
-...     'o  '
-...     '  x')
+...     '-x-'
+...     'o--'
+...     '--x')
 >>> state
-' x o    x'
+'-x-o----x'
 >>> validate_state(state)
 >>> # (no exceptions indicates successful validation)
 >>> printboard(state)
@@ -55,15 +55,34 @@ class TTTStateError(StandardError):
     pass
 
 
+# TODO: The majority of these functions employ a state variable as their first
+# argument. It would make sense to pack them up into a class and keep the state
+# there. Also, code might read easier.
+
+# TODO: The negamax algorithm is useful in general; we could refactor it out of
+# evaluate_state, and make it a general-purpose function that takes a state
+# evaluation and a children-generating function as arguments. 
+#
+# evaluate = create_negamax(evaluate_terminal_state, children)
+# state.evaluate()
+
+# TODO: Add alpha-beta pruning to negamax algorithm.
+
+# TODO: Memoize negamax.
+
+# TODO: Improve memoization of negamax by recognizing symmetrical states and
+# storing only one canonical representation.
+
+
 def get_win_patterns():
     '''Creates a dict mapping players to regular expression objects that will
     match on a game state they have won.
    
     >>> win_patterns = get_win_patterns()
-    >>> win_patterns['o'].match('xxx      ') and 'O Wins'
-    >>> win_patterns['x'].match('xxx      ') and 'X Wins'
+    >>> win_patterns['o'].match('xxx------') and 'O Wins'
+    >>> win_patterns['x'].match('xxx------') and 'X Wins'
     'X Wins'
-    >>> win_patterns['o'].match('x x   ooo') and 'O Wins'
+    >>> win_patterns['o'].match('x-x---ooo') and 'O Wins'
     'O Wins'
 
     '''
@@ -88,18 +107,18 @@ def validate_state(state):
     '''Raises an error if state is invalid. Otherwise returns None.
     
     >>> validate_state('xxxooxoox')
-    >>> validate_state('xxx      ')
+    >>> validate_state('xxx------')
     Traceback (most recent call last):
     ...
     TTTStateError: Tic Tac Toe state indicates a player moved out-of-turn.
     
     '''
-    if not isinstance(state, str):
-        raise TTTStateError('Tic Tac Toe state must be a string instance.')
+    if not isinstance(state, str) and not isinstance(state, unicode):
+        raise TTTStateError('Tic Tac Toe state %s must be a string instance.' % repr(state))
     if len(state) != 9:
         raise TTTStateError('Tic Tac Toe state must be exactly 9 characters long.')
-    if state.strip('xo ') != '':
-        raise TTTStateError('Tic Tac Toe state must contain only the characters x, o, or space.')
+    if state.strip('xo-') != '':
+        raise TTTStateError('Tic Tac Toe state must contain only the characters x, o, or -.')
     if state.count('x') - state.count('o') not in [0, 1]:
         raise TTTStateError('Tic Tac Toe state indicates a player moved out-of-turn.')
 
@@ -112,7 +131,7 @@ def printboard(state):
         ' %s | %s | %s',
         '-----------',
         ' %s | %s | %s',
-    ]) % tuple(state.upper())
+    ]) % tuple(state.upper().replace('-', ' '))
 
 
 def opponent(player):
@@ -138,18 +157,18 @@ def evaluate_state(state, player=None, _re_win=get_win_patterns()):
     player -- optional, the player who moved last.
     _re_win -- internal, do not override.
 
-    >>> state = 'x     o  '
+    >>> state = 'x-----o--'
     >>> for s in possible_moves(state, 'x'):
     ...    score = evaluate_state(s)
     ...    print '%s %5.2f %5s' % (repr(s), score,
     ...        score>0 and 'win' or score<0 and 'loss' or 'draw')
-    'xx    o  '  0.66   win
-    'x x   o  '  0.66   win
-    'x  x  o  ' -0.59  loss
-    'x   x o  '  0.00  draw
-    'x    xo  '  0.00  draw
-    'x     ox '  0.00  draw
-    'x     o x'  0.66   win
+    'xx----o--'  0.66   win
+    'x-x---o--'  0.66   win
+    'x--x--o--' -0.59  loss
+    'x---x-o--'  0.00  draw
+    'x----xo--'  0.00  draw
+    'x-----ox-'  0.00  draw
+    'x-----o-x'  0.66   win
 
     '''
     # figure out who moved last
@@ -164,7 +183,7 @@ def evaluate_state(state, player=None, _re_win=get_win_patterns()):
         return -1
 
     # check for a draw
-    elif ' ' not in state:
+    elif '-' not in state:
         return 0
 
     # recurse
@@ -178,19 +197,19 @@ def possible_moves(state, player=None):
     player -- optional, the player who will move next.
 
     Example:
-    >>> for s in possible_moves(state='xox  x o ', player='x'):
+    >>> for s in possible_moves(state='xox--x-o-', player='x'):
     ...     print repr(s)
-    'xoxx x o '
-    'xox xx o '
-    'xox  xxo '
-    'xox  x ox'
+    'xoxx-x-o-'
+    'xox-xx-o-'
+    'xox--xxo-'
+    'xox--x-ox'
 
     '''
     if player is None:
         player = opponent(lastplayer(state))
 
     for i in range(len(state)):
-        if state[i] == ' ':
+        if state[i] == '-':
             yield state[:i] + player + state[i+1:]
 
 
@@ -198,7 +217,7 @@ def move(state):
     '''Given a tictactoe board state, compute and return a new state that
     includes the computer's choice of the optimal next move.
     
-    >>> state = 'x x o   o'
+    >>> state = 'x-x-o---o'
     >>> printboard(state)
      X |   | X
     -----------
