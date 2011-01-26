@@ -1,13 +1,29 @@
-<p>
-	{% for state, image in game_board %}
-	{% spaceless %}
-	{% if state %}<a href="{{state}}">{% endif %}
-		<img src='static/{{image}}.png'/>
-		{% if state %}</a>{% endif %}
-	{% cycle '' '' '<br/>' %}
+{% extends "tictactoe/lnf.html" %}
+
+{% block title %}Tic-Tac-Toe (Simple HTML){% endblock %}
+
+{% block content %}
+<h1>Tic-tac-toe</h1>
+
+<p>(Simple HTML version)</p>
+
+<style type="text/css">
+	table { border-collapse: collapse; }
+	td { border: 1px solid black; }
+</style>
+
+<table>
+	{% for state, image in game_board %}{% spaceless %}
+	{% cycle '<tr>' '' '' %}
+		<td>
+			{% if state %}<a href="{{state}}">{% endif %}
+			<img src='static/{{image}}.png' height="100" width="100" />
+			{% if state %}</a>{% endif %}
+		</td>
+		{% cycle '' '' '</tr>' %}
 	{% endspaceless %}
 	{% endfor %}
-</p>
+</table>
 
 {% if not state %}
 <p>Click on an empty tile, or <a href="---------">make the computer move first</a>.</p>
@@ -15,21 +31,27 @@
 
 <p>
 	{% if game_over %}
-		Game over:
+		<b>Game over</b>:
 	{% else %}
 		Predicted outcome:
 	{% endif %}
 
 	{% if score < 0 %}
-		computer wins
+		computer wins.
 	{% else %}{% if score > 0 %}
-		player wins
+		player wins.
 	{% else %}
-		tie game
+		tie game.
 	{% endif %}{% endif %}
+
+	{% if game_over %}
+		Click to start a <a href='/'>new game</a>.
+	{% endif %}
 </p>
 
-{{score}}
+<!-- Heuristic score: {{score}} -->
+
+{% endblock content %}
 
 {% comment %}
 vim: set ft=django : {% endcomment %}
