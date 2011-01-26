@@ -1,0 +1,35 @@
+<p>
+	{% for state, image in game_board %}
+	{% spaceless %}
+	{% if state %}<a href="{{state}}">{% endif %}
+		<img src='static/{{image}}.png'/>
+		{% if state %}</a>{% endif %}
+	{% cycle '' '' '<br/>' %}
+	{% endspaceless %}
+	{% endfor %}
+</p>
+
+{% if not state %}
+<p>Click on an empty tile, or <a href="---------">make the computer move first</a>.</p>
+{% endif %}
+
+<p>
+	{% if game_over %}
+		Game over:
+	{% else %}
+		Predicted outcome:
+	{% endif %}
+
+	{% if score < 0 %}
+		computer wins
+	{% else %}{% if score > 0 %}
+		player wins
+	{% else %}
+		tie game
+	{% endif %}{% endif %}
+</p>
+
+{{score}}
+
+{% comment %}
+vim: set ft=django : {% endcomment %}

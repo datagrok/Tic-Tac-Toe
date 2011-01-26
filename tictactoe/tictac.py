@@ -12,40 +12,73 @@ We represent the game board (state) as a string of exactly nine characters from
 position examined from top-left to bottom-right. Example:
 
 >>> state = (
-...     '-x-'
-...     'o--'
-...     '--x')
->>> state
-'-x-o----x'
+...     '---'
+...     '---'
+...     '---')
 >>> validate_state(state)
 >>> # (no exceptions indicates successful validation)
->>> printboard(state)
-   | X |  
------------
- O |   |  
------------
-   |   | X
->>> state = move(state)
->>> state = move(state)
->>> state = move(state)
->>> state = move(state)
->>> state = move(state)
->>> printboard(state)
-   | X | O
------------
- O | O | X
------------
- X | O | X
->>> state = move(state)
->>> printboard(state)
- X | X | O
------------
- O | O | X
------------
- X | O | X
+>>> while True:
+...     score, nextstate = evaluate_state(state)
+...     printboard_small(nextstate)
+...     print 'Score: %.2f' % score
+...     if score == 1:
+...         print 'Win'
+...         break
+...     if score == -1:
+...         print 'Lose'
+...         break
+...     if score == 0 and '-' not in state:
+...         print 'Tie game.'
+...         break
+...     state = nextstate
+x--
+---
+---
+Score: -0.00
+x--
+-o-
+---
+Score: 0.00
+xx-
+-o-
+---
+Score: -0.00
+xxo
+-o-
+---
+Score: 0.00
+xxo
+-o-
+x--
+Score: -0.00
+xxo
+oo-
+x--
+Score: 0.00
+xxo
+oox
+x--
+Score: -0.00
+xxo
+oox
+xo-
+Score: 0.00
+xxo
+oox
+xox
+Score: -0.00
+xxo
+oox
+xox
+Score: 0.00
+Tie game.
+
 
 '''
 import re
+
+# My very trivial memoization module. Python 3 also has functools.lrucache.
+from datagrok import memoized
 
 __author__ = 'Michael F. Lamb <mike@datagrok.org>'
 __date__ = 'Thu, 20 Jan 2011 01:15:05 -0500'
@@ -67,8 +100,6 @@ class TTTStateError(StandardError):
 # state.evaluate()
 
 # TODO: Add alpha-beta pruning to negamax algorithm.
-
-# TODO: Memoize negamax.
 
 # TODO: Improve memoization of negamax by recognizing symmetrical states and
 # storing only one canonical representation.
@@ -134,6 +165,11 @@ def printboard(state):
     ]) % tuple(state.upper().replace('-', ' '))
 
 
+def printboard_small(state):
+    '''Utility function to display the state as an ascii-art game board.'''
+    print '\n'.join([state[0:3], state[3:6], state[6:9]])
+
+
 def opponent(player):
     '''Returns the player opposite the player given as the argument.'''
     if player == 'x':
@@ -148,16 +184,29 @@ def lastplayer(state):
     return 'o'
 
 
-def evaluate_state(state, player=None, _re_win=get_win_patterns()):
+@memoized
+#@notifying
+def evaluate_state(state, _re_win=get_win_patterns()):
     '''Returns a float between 1 and -1 representing the greatest possible loss
-    for the player about to move in this particular state. Against a perfect
-    opponent, a negative value guarantees a loss and a 0 value guarantees a
-    tie.
+    for the player about to move in this particular state, and the new state
+    after making that move. Against a perfect opponent, a negative value
+    guarantees a loss and a 0 value guarantees a tie.
 
-    player -- optional, the player who moved last.
-    _re_win -- internal, do not override.
+    Given a tictactoe board state, compute and return a tuple indicating the
+    win status and a new state that includes the computer's choice of the
+    optimal next move.
+
+    If the game is already won by the computer, the state will not change.
+
+    A win status of -1 indicates a win by the player. (Game over)
+    A win status of 1 indicates a win by the computer. (Game over)
+    A win status of 0 indicates a draw
+
+    Arguments:
+        _re_win -- internal, do not override.
 
     >>> state = 'x-----o--'
+    >>> evaluate_state(state)
     >>> for s in possible_moves(state, 'x'):
     ...    score = evaluate_state(s)
     ...    print '%s %5.2f %5s' % (repr(s), score,
@@ -172,23 +221,23 @@ def evaluate_state(state, player=None, _re_win=get_win_patterns()):
 
     '''
     # figure out who moved last
-    if player is None:
-        player = lastplayer(state)
+    player = lastplayer(state)
 
     # check for a win
     if _re_win[player].match(state):
-        return 1
+        return 1, state
     # check for a loss
     elif _re_win[opponent(player)].match(state):
-        return -1
+        return -1, state
 
     # check for a draw
     elif '-' not in state:
-        return 0
+        return 0, state
 
     # recurse
     else:
-        return -.9 * max([evaluate_state(s) for s in possible_moves(state, opponent(player))])
+        score, state = max([(evaluate_state(s)[0], s) for s in possible_moves(state, opponent(player))])
+        return -.9 * score, state
 
 
 def possible_moves(state, player=None):
@@ -211,33 +260,6 @@ def possible_moves(state, player=None):
     for i in range(len(state)):
         if state[i] == '-':
             yield state[:i] + player + state[i+1:]
-
-
-def move(state):
-    '''Given a tictactoe board state, compute and return a new state that
-    includes the computer's choice of the optimal next move.
-    
-    >>> state = 'x-x-o---o'
-    >>> printboard(state)
-     X |   | X
-    -----------
-       | O |  
-    -----------
-       |   | O
-    >>> printboard(move(state))
-     X | X | X
-    -----------
-       | O |  
-    -----------
-       |   | O
-    '''
-
-    my_player = opponent(lastplayer(state))
-    states = [(evaluate_state(s, my_player), s) for s in possible_moves(state, my_player)]
-    states.sort()
-    states.reverse()
-
-    return states[0][1]
 
 
 if __name__ == "__main__":
