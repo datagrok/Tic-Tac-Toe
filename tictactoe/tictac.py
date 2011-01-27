@@ -78,7 +78,7 @@ Tie game.
 import re
 
 # My very trivial memoization module. Python 3 also has functools.lrucache.
-from datagrok import memoized
+from datagrok.misc import memoized
 
 __author__ = 'Michael F. Lamb <mike@datagrok.org>'
 __date__ = 'Thu, 20 Jan 2011 01:15:05 -0500'
@@ -223,14 +223,19 @@ def evaluate_state(state, _re_win=get_win_patterns()):
     # figure out who moved last
     player = lastplayer(state)
 
-    # check for a win
-    if _re_win[player].match(state):
+    win = _re_win[player].match(state)
+    loss = _re_win[opponent(player)].match(state)
+
+    if win and loss:
+        raise TTTStateError('It is impossible for both players to have won.')
+
+    elif win:
         return 1, state
-    # check for a loss
-    elif _re_win[opponent(player)].match(state):
+
+    elif loss:
         return -1, state
 
-    # check for a draw
+    # neither win nor loss means either game continues, or draw. check for draw
     elif '-' not in state:
         return 0, state
 

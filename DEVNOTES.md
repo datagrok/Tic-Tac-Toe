@@ -48,11 +48,12 @@ Django session middleware, etc.
 			tests.py         } Django boilerplate
 			views.py        /
 
+
 ### Design Decisions/Rationale
 
 Directory layout: forked github repo name is "Tic-Tac-Toe." Dashes are invalid in python package and module names; django apps are python packages. Looking around at Django apps on github, there seems to be no strict standard for directory layout. Don't want to overwrite upstream README with my own.
 
-tictac.py module: keep game logic decoupled from django framework. 'tictac' algorithm module to avoid possible name conflicts with 'tictactoe' django app. (Maybe there's a better way but refactoring is easy, go with this)
+tictac.py module: keep game logic decoupled from django framework. tictac.py is intented to encapsulate all the logic common to python implementations of a tic-tac-toe-playing algorithm, with nothing specific to django. Named 'tictac' to avoid possible name conflicts with 'tictactoe' django app. Since I'm green with django I'm not sure where the most appropriate place for this to live might be. Looks like these issues have been considered within http://github.com/bueda/django-boilerplate/ and may provide a good convention. Improve later.
 
 Algorithm ([minimax]): Tried [Randy Hyde's algorithm][1], initial tests showed it not to work well. Not going to waste time on any more arbitrarily specified algorithms, will just implement [minimax] and let the machine do the heavy lifting. Since tic-tac-toe has symmetries and users must take turns moving, there should be plenty of opportunity to reduce storage and processing load if needed.
 
