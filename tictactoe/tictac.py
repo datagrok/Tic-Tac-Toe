@@ -77,15 +77,8 @@ Tie game.
 '''
 import re
 
-# My very trivial memoization module. Python 3 also has functools.lrucache.
-from datagrok.misc import memoized
-
 __author__ = 'Michael F. Lamb <mike@datagrok.org>'
 __date__ = 'Thu, 20 Jan 2011 01:15:05 -0500'
-
-
-class TTTStateError(StandardError):
-    pass
 
 
 # TODO: The majority of these functions employ a state variable as their first
@@ -103,6 +96,28 @@ class TTTStateError(StandardError):
 
 # TODO: Improve memoization of negamax by recognizing symmetrical states and
 # storing only one canonical representation.
+
+
+class TTTStateError(StandardError):
+    pass
+
+
+# I have copied this simple memoizing decorator from my library of utilities;
+# see https://github.com/datagrok/python-misc/blob/master/misc/__init__.py.
+#
+# Once I determine best practices for organizing shared libraries for django
+# installations I will likely move it out of this module and import it to use
+# it. If we're using Python3, there is a memoizer in functools.lrucache as
+# well.
+def memoized(fn):
+    """A memoizing decorator """
+    results = {}
+    def _memoized_fn(*args):
+        if args not in results:
+            results[args] = fn(*args)
+        return results[args]
+    _memoized_fn.__doc__ = fn.__doc__.replace('Returns', 'A memoization of', 1)
+    return _memoized_fn
 
 
 def get_win_patterns():

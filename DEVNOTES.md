@@ -47,11 +47,13 @@ Django session middleware, etc.
 			models.py       \
 			tests.py         } Django boilerplate
 			views.py        /
+			static/			Static files (graphics, css)
+			templates/
 
 
 ### Design Decisions/Rationale
 
-Directory layout: forked github repo name is "Tic-Tac-Toe." Dashes are invalid in python package and module names; django apps are python packages. Looking around at Django apps on github, there seems to be no strict standard for directory layout. Don't want to overwrite upstream README with my own.
+Directory layout: forked github repo name is "Tic-Tac-Toe." Dashes are invalid in python package and module names; django apps are python packages. Looking around at Django apps on github, there seems to be no strict standard for directory layout. [Possible best-practice from StackOverflow][2]. Don't want to overwrite upstream README with my own.
 
 tictac.py module: keep game logic decoupled from django framework. tictac.py is intented to encapsulate all the logic common to python implementations of a tic-tac-toe-playing algorithm, with nothing specific to django. Named 'tictac' to avoid possible name conflicts with 'tictactoe' django app. Since I'm green with django I'm not sure where the most appropriate place for this to live might be. Looks like these issues have been considered within http://github.com/bueda/django-boilerplate/ and may provide a good convention. Improve later.
 
@@ -60,6 +62,7 @@ Algorithm ([minimax]): Tried [Randy Hyde's algorithm][1], initial tests showed i
 Algorithm: [negamax] variant of [minimax] demonstrated itself to be appropriate for this task, because the game is alternate-player
 
 [1]: http://webster.cs.ucr.edu/AsmTools/MASM/TicTacToe/ttt_1.html
+[2]: http://stackoverflow.com/questions/4479901/django-shared-library-classes
 [negamax]: http://en.wikipedia.org/wiki/Negamax
 
 Pushing dev branch to github: normally, I would keep my development branch on my local machine and only push after a nice clean merge to master, but I want to show my progress to the reviewer.
@@ -70,19 +73,20 @@ State representation: As a string, for easy matching with python builtin regular
 
 ### Algorithm
 
-- Implement [MiniMax] algorithm (more general, pretending requirements might change) Recursively determines best move given any game state.
+- **Implemented.** [MiniMax] algorithm. Recursively, deterministically, exhaustively determines best move given any game state. (Had this not been tic-tac-toe, other algorithms may be more appropriate.)
+	- **Implemented.** Enhancement: create hashtable (dict) that stores game states with best move
 	- Enhancement: employ deque rather than relying on recursive calls; if this were not tic-tac-toe we might need more tracking than Python's call stack could provide.
 	- Enhancement: employ [alpha-beta pruning] to reduce storage requirement
-	- Enhancement: create hashtable (dict) that stores game states with best move
 	- Enhancement: tic-tac-toe board has dihedral symmetry of order 8; use this to decrease storage requirement for hashtable
 		- Create function to find "canonical state" that can be looked up given any game state. (And a function to invert the stored best move back to symmetrical state)
+		- Is the extra computation involved worth the savings in memory? May need to benchmark and/or check requirements.
 
 [minimax]: http://en.wikipedia.org/wiki/Minimax#Minimax_algorithm_with_alternate_moves
 [alpha-beta pruning]: http://en.wikipedia.org/wiki/Alpha-beta_pruning
 
 ### Server-side
 
-- First iteration: simple, featureless.
+- **Implemented.** First iteration: simple, featureless.
 - Later enhancements:
 	- User login, ranking (req. sessions and database api)
 
