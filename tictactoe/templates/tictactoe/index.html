@@ -20,7 +20,7 @@
 			<img src='static/{{image}}.png' height="100" width="100" />
 			{% if state %}</a>{% endif %}
 		</td>
-		{% cycle '' '' '</tr>' %}
+	{% cycle '' '' '</tr>' %}
 	{% endspaceless %}
 	{% endfor %}
 </table>
@@ -45,7 +45,7 @@
 	{% endif %}{% endif %}
 
 	{% if game_over %}
-		Click to start a <a href='/'>new game</a>.
+		Click to start a <a href='./'>new game</a>.
 	{% endif %}
 </p>
 
