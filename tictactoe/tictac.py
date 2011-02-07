@@ -221,9 +221,8 @@ def evaluate_state(state, _re_win=get_win_patterns()):
         _re_win -- internal, do not override.
 
     >>> state = 'x-----o--'
-    >>> evaluate_state(state)
     >>> for s in possible_moves(state, 'x'):
-    ...    score = evaluate_state(s)
+    ...    score, nextstate = evaluate_state(s)
     ...    print '%s %5.2f %5s' % (repr(s), score,
     ...        score>0 and 'win' or score<0 and 'loss' or 'draw')
     'xx----o--'  0.66   win
