@@ -12,6 +12,8 @@ class TestSimpleHtmlGame(TestCase):
     simple HTML view.
     
     '''
+    urls = 'tictactoe.urls'
+
     def setUp(self):
         self.client = Client()
 
