@@ -98,7 +98,27 @@ __date__ = 'Thu, 20 Jan 2011 01:15:05 -0500'
 # storing only one canonical representation.
 
 
+# I don't like performing computation on module import, but this style makes
+# pylint happy. Could also put this in a class, but might as well implement
+# that way when I implement the other to-dos.
+WIN_PATTERN = '|'.join([
+    'xxx......',
+    '...xxx...',
+    '......xxx',
+    'x..x..x..',
+    '.x..x..x.',
+    '..x..x..x',
+    'x...x...x',
+    '..x.x.x..',
+])
+WIN_RE = {
+    'x': re.compile(WIN_PATTERN),
+    'o': re.compile(WIN_PATTERN.replace('x','o')),
+}
+
+
 class TTTStateError(StandardError):
+    '''The state representing the Tic-Tac-Toe game is invalid.'''
     pass
 
 
@@ -109,44 +129,22 @@ class TTTStateError(StandardError):
 # installations I will likely move it out of this module and import it to use
 # it. If we're using Python3, there is a memoizer in functools.lrucache as
 # well.
-def memoized(fn):
+def memoized(func):
     """A memoizing decorator """
     results = {}
-    def _memoized_fn(*args):
+    def _memoized_func(*args):
+        '''Ensure enclosed dict 'results' contains results of evaluating
+        enclosed function 'func' with args.
+
+        '''
         if args not in results:
-            results[args] = fn(*args)
+            results[args] = func(*args)
         return results[args]
-    _memoized_fn.__doc__ = fn.__doc__.replace('Returns', 'A memoization of', 1)
-    return _memoized_fn
-
-
-def get_win_patterns():
-    '''Creates a dict mapping players to regular expression objects that will
-    match on a game state they have won.
-   
-    >>> win_patterns = get_win_patterns()
-    >>> win_patterns['o'].match('xxx------') and 'O Wins'
-    >>> win_patterns['x'].match('xxx------') and 'X Wins'
-    'X Wins'
-    >>> win_patterns['o'].match('x-x---ooo') and 'O Wins'
-    'O Wins'
-
-    '''
-    win_pattern = '|'.join([
-        'xxx......',
-        '...xxx...',
-        '......xxx',
-        'x..x..x..',
-        '.x..x..x.',
-        '..x..x..x',
-        'x...x...x',
-        '..x.x.x..',
-    ])
-
-    return {
-        'x': re.compile(win_pattern),
-        'o': re.compile(win_pattern.replace('x','o')),
-    }
+    # I think this is nice, but pylint complains; check with supervisor and
+    # adjust .pylintrc.
+    #_memoized_func.__doc__ = func.__doc__.replace(
+    #    'Returns', 'A memoization of', 1)
+    return _memoized_func
 
 
 def validate_state(state):
@@ -160,13 +158,17 @@ def validate_state(state):
     
     '''
     if not isinstance(state, str) and not isinstance(state, unicode):
-        raise TTTStateError('Tic Tac Toe state %s must be a string instance.' % repr(state))
+        raise TTTStateError(
+            'Tic Tac Toe state %s must be a string instance.' % repr(state))
     if len(state) != 9:
-        raise TTTStateError('Tic Tac Toe state must be exactly 9 characters long.')
+        raise TTTStateError(
+            'Tic Tac Toe state must be exactly 9 characters long.')
     if state.strip('xo-') != '':
-        raise TTTStateError('Tic Tac Toe state must contain only the characters x, o, or -.')
+        raise TTTStateError(
+            'Tic Tac Toe state must contain only the characters x, o, or -.')
     if state.count('x') - state.count('o') not in [0, 1]:
-        raise TTTStateError('Tic Tac Toe state indicates a player moved out-of-turn.')
+        raise TTTStateError(
+            'Tic Tac Toe state indicates a player moved out-of-turn.')
 
 
 def printboard(state):
@@ -201,7 +203,7 @@ def lastplayer(state):
 
 @memoized
 #@notifying
-def evaluate_state(state, _re_win=get_win_patterns()):
+def evaluate_state(state):
     '''Returns a float between 1 and -1 representing the greatest possible loss
     for the player about to move in this particular state, and the new state
     after making that move. Against a perfect opponent, a negative value
@@ -216,9 +218,6 @@ def evaluate_state(state, _re_win=get_win_patterns()):
     A win status of -1 indicates a win by the player. (Game over)
     A win status of 1 indicates a win by the computer. (Game over)
     A win status of 0 indicates a draw
-
-    Arguments:
-        _re_win -- internal, do not override.
 
     >>> state = 'x-----o--'
     >>> for s in possible_moves(state, 'x'):
@@ -237,8 +236,8 @@ def evaluate_state(state, _re_win=get_win_patterns()):
     # figure out who moved last
     player = lastplayer(state)
 
-    win = _re_win[player].match(state)
-    loss = _re_win[opponent(player)].match(state)
+    win = WIN_RE[player].match(state)
+    loss = WIN_RE[opponent(player)].match(state)
 
     if win and loss:
         raise TTTStateError('It is impossible for both players to have won.')
@@ -255,9 +254,10 @@ def evaluate_state(state, _re_win=get_win_patterns()):
 
     # recurse
     else:
-        score, state = max([(evaluate_state(s)[0], s) for s in possible_moves(state, opponent(player))])
+        score, state = max([
+            (evaluate_state(s)[0], s)
+            for s in possible_moves(state, opponent(player))])
         return -.9 * score, state
-
 
 def possible_moves(state, player=None):
     '''Generate all possible moves for the next player, given state.
