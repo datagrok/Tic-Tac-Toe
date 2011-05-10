@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <stdio.h>
 
 uint32_t states[0x40000];
 uint32_t owins[8];
@@ -32,6 +33,8 @@ uint32_t whose_turn(uint32_t q) {
 	q = (q | (q >> 9)) & 0b111111111;
 
 	/* For each occupied space on the board, flip the result. */
+	/* FIXME: there is a trick involving (x & (x-1)) that might be useful here.
+	 */
 	while (q) {
 		r = r ^ (q & 1);
 		q = q>>1;
@@ -44,6 +47,7 @@ int check_win(uint32_t input) {
 	 * 		0: X has won
 	 * 		1: O has won
 	 * 		-1: neither has won
+	 */
 	int i;
 	for (i=0; i<8; i++) {
 		if (input & xwins[i] == xwins[i]) {
@@ -69,7 +73,36 @@ void init() {
 	}
 }
 
+void print_state(uint32_t state) {
+	char output[13];
+	output[3] = output[7] = output[11] = '\n';
+	output[12] = '\0';
+	int i; /* index */
+	for (i=0; i<9; i++) {
+		if (state & 1) {
+			output[i + i/3] = 'X';
+		} else {
+			output[i + i/3] = '-';
+		}
+		state = state>>1;
+	}
+	for (i=0; i<9; i++) {
+		if (state & 1) {
+			output[i + i/3] = 'O';
+		}
+		state = state>>1;
+	}
+	printf("%s\n", output);
+}
+
 int main(int argc, char **argv) {
+	int i;
 	init();
+	for (i=0; i<8; i++) {
+		print_state(xwins[i]);
+	}
+	for (i=0; i<8; i++) {
+		print_state(owins[i]);
+	}
 	return 0;
 }
