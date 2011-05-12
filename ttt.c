@@ -1,3 +1,24 @@
+/*
+ * ttt.c
+ *
+ * Implements the game of tic-tac-toe.
+ *
+ * Approach:
+ * 	- Represent the board as a bitfield
+ * 	- Check for moves with bitwise arithmetic
+ * 	- Main function is "stateless"; given a board state it computes the next
+ * 	player to move and returns their best move.
+ * 	- UI logic is decoupled from game logic; possibly even a separate process.
+ * 	Execution might look like:
+ * 		cat board.txt | ./tttread | ./ttt | ./tttshow
+ * 	- Benchmarks, graphs of games, memory use vs. time :)
+ *
+ * Board is represented as a 32-bit integer:
+ * 	- Bits 0-9: X
+ * 	- Bits 10-18: O
+ * 	- Bits 19-31: Unused. Maybe report game state.
+ * */
+
 #include <stdint.h>
 #include <stdio.h>
 
@@ -15,7 +36,12 @@ uint32_t xwins[8] = {
 };
 
 uint32_t valid_state(uint32_t q) {
-
+	/* Sanity check the board state. A valid board:
+	 *
+	 * - Has no X occupying the same position as O
+	 * - Has count(X moves) - count(O moves) = 0 or 1.
+	 * - Has exactly 1 or 0 winners
+	 */
 }
 
 uint32_t whose_turn(uint32_t q) {
@@ -43,7 +69,7 @@ uint32_t whose_turn(uint32_t q) {
 }
 
 int check_win(uint32_t input) {
-	/* Determine if a player has won. Returns:
+	/* Given a valid board state, determine if a player has won. Returns:
 	 * 		0: X has won
 	 * 		1: O has won
 	 * 		-1: neither has won
