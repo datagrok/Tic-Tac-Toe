@@ -58,12 +58,13 @@ uint32_t whose_turn(uint32_t q) {
 	/* Combine the X and O board, mask anything else. */
 	q = (q | (q >> 9)) & 0b111111111;
 
-	/* For each occupied space on the board, flip the result. */
-	/* FIXME: there is a trick involving (x & (x-1)) that might be useful here.
+	/* This and various other ways to count the number of
+	 * bits set:
+	 * http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetKernighan
 	 */
-	while (q) {
-		r = r ^ (q & 1);
-		q = q>>1;
+	for (r = 0; q; r++)
+	{
+		q &= q - 1; // clear the least significant bit set
 	}
 	return r;
 }
@@ -132,3 +133,4 @@ int main(int argc, char **argv) {
 	}
 	return 0;
 }
+
