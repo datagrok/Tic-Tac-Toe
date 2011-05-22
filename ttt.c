@@ -14,17 +14,24 @@
  * 	- Benchmarks, graphs of games, memory use vs. time :)
  *
  * Board is represented as a 32-bit integer:
- * 	- Bits 0-9: X
- * 	- Bits 10-18: O
+ * 	- Bits 0-9: 1 if X occupies a position
+ * 	- Bits 10-18: 1 if O occupies a position
  * 	- Bits 19-31: Unused. Maybe report game state.
  * */
 
 #include <stdint.h>
 #include <stdio.h>
 
+/* "C does not provide a standard boolean type, because picking one involves a
+ * space/time tradeoff which is best decided by the programmer.  (Using an int
+ * for a boolean may be faster, while using char may save data space.)"
+ * http://www.lysator.liu.se/c/c-faq/c-8.html
+ */
+typedef unsigned int bool;
+enum bool {false, true};
+
 uint32_t states[0x40000];
-uint32_t owins[8];
-uint32_t xwins[8] = {
+uint32_t wins[2][8] = { {
 	0b000000000111000000,
 	0b000000000000111000,
 	0b000000000000000111,
@@ -33,7 +40,16 @@ uint32_t xwins[8] = {
 	0b000000000001001001,
 	0b000000000100010001,
 	0b000000000001010100,
-};
+}, {
+	0b111000000000000000,
+	0b000111000000000000,
+	0b000000111000000000,
+	0b100100100000000000,
+	0b010010010000000000,
+	0b001001001000000000,
+	0b100010001000000000,
+	0b001010100000000000,
+} };
 
 uint32_t valid_state(uint32_t q) {
 	/* Sanity check the board state. A valid board:
@@ -44,48 +60,106 @@ uint32_t valid_state(uint32_t q) {
 	 */
 }
 
-uint32_t whose_turn(uint32_t q) {
-	/* Determine the next player to move given a valid board
-	 * state. Returns:
-	 * 		0: X moves next
-	 * 		1: O moves next
+bool x_just_moved(uint32_t q) {
+	/* Determine if the player most recently to moved given a valid board state
+	 * was "X". Returns:
+	 * 		0 (false): O just moved; X moves next
+	 * 		1 (true): X just moved; O moves next
 	 */
 	uint32_t r = 0; /* return value */
 
-	/* Strategy: if the total number of moves (1s) is even, X
-	 * moves next. */
+	/* Strategy: if the total number of moves (1s) is even, X moves next. */
 
 	/* Combine the X and O board, mask anything else. */
 	q = (q | (q >> 9)) & 0b111111111;
 
-	/* This and various other ways to count the number of
-	 * bits set:
+	/* This and various other ways to count the number of bits set:
 	 * http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetKernighan
 	 */
-	for (r = 0; q; r++)
-	{
+	for (r = 0; q; r++) {
 		q &= q - 1; // clear the least significant bit set
 	}
 	return r;
 }
 
-int check_win(uint32_t input) {
-	/* Given a valid board state, determine if a player has won. Returns:
-	 * 		0: X has won
-	 * 		1: O has won
-	 * 		-1: neither has won
+bool winning_move(uint32_t input) {
+	/* Given a valid board state, determine if the most recent player to move
+	 * has won. Returns:
+	 * 		0 (false): No win
+	 * 		1 (true): player has won
 	 */
-	int i;
+	int i; /* loop index */
+	int j; /* player index */
+
+	/* We need test only the win patterns for the player who has most recently
+	 * moved. */
+	if (x_just_moved(input)) {
+		j = 0;
+	} else {
+		j = 1;
+	}
+
 	for (i=0; i<8; i++) {
-		if (input & xwins[i] == xwins[i]) {
-			return 0;
+		if (input & wins[j][i] == wins[j][i]) {
+			return true;
 		}
 	}
-	return 0;
+	return false;
 }
 
 uint32_t next_state(uint32_t input) {
+	/* Given a valid board state, compute and return the board state showing
+	 * the best next move. This is just a memoization function for
+	 * _next_state(). */
+	if (!states[input]) {
+		states[input] = _next_state(input)
+	}
+	return states[input];
+}
 
+uint32_t _next_state(uint32_t input) {
+	/* Recursive helper to next_state.
+	 *
+	 * 
+	 *
+	 * Strategy: Perform a breadth-first recursive search for a winning state.
+	 */
+	int i;
+	int score, best_score = 0;
+	uint32_t state, best_state;
+
+	for (i = 0; i<8; i++) {
+		/* If the space is occupied, skip. */
+		if (0xb1000000001<<i & input) {
+			continue;
+		}
+
+		state = input & player<<i;
+		score = minimax(state, 9)
+		if score > best_score {
+			best_score = score;
+			best_state = state;
+		}
+
+		/* We won't do any better than an immediate win... */
+		if (best_score == 9) {
+			break;
+		}
+	}
+	return best_state;
+}
+
+int minimax(uint32_t node, char depth) {
+	if winning_move(input & player<<i) {
+		return depth;
+	}
+	for (i = 0; i<8; i++) {
+		/* If the space is occupied, skip. */
+		if (0xb1000000001<<i & input) { continue; }
+		if winning_move(input & player<<i) {
+			return input & player<<i;
+		}
+	}
 }
 
 void init() {
@@ -93,10 +167,6 @@ void init() {
 	/* initialize DP work area */
 	for (i=0; i<0x40000; i++) {
 		states[i] = 0;
-	}
-	/* initialize win table for O */
-	for (i=0; i<8; i++) {
-		owins[i] = xwins[i] << 9;
 	}
 }
 
@@ -123,13 +193,12 @@ void print_state(uint32_t state) {
 }
 
 int main(int argc, char **argv) {
-	int i;
+	int i, j;
 	init();
-	for (i=0; i<8; i++) {
-		print_state(xwins[i]);
-	}
-	for (i=0; i<8; i++) {
-		print_state(owins[i]);
+	for (j=0; j<2; j++) {
+		for (i=0; i<8; i++) {
+			print_state(wins[j][i]);
+		}
 	}
 	return 0;
 }
