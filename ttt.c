@@ -51,6 +51,26 @@ uint32_t wins[2][8] = { {
 	0b001010100000000000,
 } };
 
+uint32_t m2(uint32_t b) {
+    /* vertical mirror board */
+    uint32_t x;
+    x = ((b >> 6) ^ b) & 0b000000111000000111;
+    b ^= ((x << 6) | x);
+    return b;
+}
+
+uint32_t r1(uint32_t b) {
+    /* rotate board */
+    uint32_t x;
+    x = ((b >> 2) ^ b) & 0b001100011001100011;
+    b ^= ((x << 2) | x);
+    x = ((b >> 3) ^ b) & 0b000100001000100001;
+    b ^= ((x << 3) | x);
+    x = ((b >> 5) ^ b) & 0b000001001000001001;
+    b ^= ((x << 5) | x);
+    return b;
+}
+
 uint32_t valid_state(uint32_t q) {
 	/* Sanity check the board state. A valid board:
 	 *
@@ -107,16 +127,6 @@ bool winning_move(uint32_t input) {
 	return false;
 }
 
-uint32_t next_state(uint32_t input) {
-	/* Given a valid board state, compute and return the board state showing
-	 * the best next move. This is just a memoization function for
-	 * _next_state(). */
-	if (!states[input]) {
-		states[input] = _next_state(input)
-	}
-	return states[input];
-}
-
 uint32_t _next_state(uint32_t input) {
 	/* Recursive helper to next_state.
 	 *
@@ -148,6 +158,17 @@ uint32_t _next_state(uint32_t input) {
 	}
 	return best_state;
 }
+
+uint32_t next_state(uint32_t input) {
+	/* Given a valid board state, compute and return the board state showing
+	 * the best next move. This is just a memoization function for
+	 * _next_state(). */
+	if (!states[input]) {
+		states[input] = _next_state(input)
+	}
+	return states[input];
+}
+
 
 int minimax(uint32_t node, char depth) {
 	if winning_move(input & player<<i) {
